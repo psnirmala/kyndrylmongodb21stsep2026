@@ -1,0 +1,217 @@
+mongod --verion
+
+mongosh --version
+
+sudo systemctl status mongod
+
+
+mongosh
+
+use trainingdb
+
+show dbs
+
+trainingdb> show tables
+
+trainingdb> db.employee.insertOne({"empId":1001,"name":"Arvind","designation":"Developer"});
+
+trainingdb> show tables;
+employee
+trainingdb> show dbs
+
+trainingdb> db.employee.insertOne({"empId":1002,"name":"Deva","designation":"Accountant"});
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.insertOne({"empId":1004,"name":"Rajesh","designation":"DBA","address":{"location":"Hebbal","city":"Bangalore"}});
+
+
+trainingdb> db.employee.insertOne({"_id":545444,"empId":1004});
+{ acknowledged: true, insertedId: 545444 }
+trainingdb> db.employee.insertOne({"_id":545444,"empId":1008});
+
+//duplicate error
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.getIndexes()
+
+trainingdb> db.employee.insertMany([{"empId":34343,"name":"Surya"},{"empId":233222,"name":"Priya"}])
+
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.updateOne({"empId":34343},{"$set":{"designation":"Developer"}});
+
+trainingdb> db.employee.find()
+
+
+
+trainingdb> db.employee.updateOne({"empId":34343},{"$set":{"name":"Surya Prakash"}});
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.updateOne({"empId":34343},{"$rename":{"empId":"employeeId"}});
+
+trainingdb> db.employee.find()
+trainingdb> db.employee.updateMany({},{"$rename":{"empId":"employeeId"}});
+trainingdb> db.employee.updateMany({},{"$unset":{"designation":""}});
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.updateMany({},{"$set":{"salary":40000}});
+
+
+trainingdb> db.employee.find()
+
+trainingdb> db.employee.find({"employeeId":{"$lt":1004}});
+
+trainingdb> db.employee.updateMany({"employeeId":{"$lt":1004}},{"$inc":{"salary":5000}});
+
+trainingdb> db.employee.updateMany({"employeeId":{"$gte":1004}},{"$inc":{"salary":-3000}});
+
+trainingdb> db.employee.updateOne({"employeeId":233222},{"$set":{"name":"Priyadarshini","salary":43000}});
+
+rainingdb> db.student.insertOne({"name":"Akash","subjects":["Python","Java"]});
+
+trainingdb> db.student.insertOne({"name":"Arjun","subjects":["Java","C#"]});
+
+trainingdb> db.student.find()
+
+trainingdb> db.student.updateOne({"name":"Akash"},{"$push":{"subjects":"MongoDB"}});
+
+trainingdb> db.student.find()
+
+
+trainingdb> db.student.updateOne({"name":"Akash"},{"$pull":{"subjects":"Java"}});
+
+trainingdb> db.student.find()
+
+
+rainingdb> db.student.updateOne({"name":"Deva"},{"$push":{"subjects":"Python"}},{"upsert":true});
+trainingdb> db.student.find()
+trainingdb> db.student.updateOne({"name":"Akash"},{"$push":{"subjects":"Cassandra"}},{"upsert":true});
+trainingdb> db.student.find()
+trainingdb> db.student.updateOne({"name":"Akash"},{"$set":{"classId":2111}},{"upsert":true});
+trainingdb> db.student.find()
+trainingdb> db.student.updateOne({"name":"Priya"},{"$set":{"classId":2111}},{"upsert":true});
+
+trainingdb> db.employee.deleteOne({"salary":{"$gt":40000}});
+
+trainingdb> db.student.find()
+
+
+trainingdb> db.employee.deleteMany({"salary":{"$gt":40000}});
+
+trainingdb> db.student.find()
+
+mongodb-compass
+
+
+db.employee.drop() //drops a table
+
+//drops a database
+trainingdb> db.dropDatabase()
+show dbs
+
+
+for(var i=1;i<=10;i++) {
+ db.x.insertOne({"a":i,"b":i*2});
+
+}
+
+trainingdb> db.x.find({"a":{"$lte":5}})
+
+trainingdb> db.x.find({"a":{"$lte":5}}trainingdb> db.x.find({},{b:1,_id:0})
+
+trainingdb> db.x.find({},{"_id":0})
+})
+db.d.find({},{"b":1})
+
+trainingdb> db.x.find({"a":{"$lte":5}},{"b":1,"_id":0})
+
+trainingdb> db.x.find({"a":{"$lte":5}},{"_id":0})
+
+trainingdb> db.x.find({},{"_id":0,"a":1}).sort({"a":-1})
+
+trainingdb> db.x.find({},{"_id":0,"a":1}).sort({"a":-1}).forEach(function(x){console.log(x.a)});
+
+
+trainingdb> db.blogs.insertOne({"author":"David","score":90,"views":800});
+
+trainingdb> db.blogs.insertOne({"author":"Arvind","score":80,"views":600});
+
+trainingdb> db.blogs.insertOne({"author":"Arvind","score":90,"views":1000});
+trainingdb> db.blogs.insertOne({"author":"Surya","score":78,"views":1200});
+
+trainingdb> db.blogs.insertOne({"author":"David","score":87,"views":700});
+trainingdb> db.blogs.insertOne({"author":"Surya","score":88,"views":200});
+trainingdb> db.blogs.insertOne({"author":"Arvind","score":66,"views":600});
+
+
+db.blogs.countDocuments()
+
+trainingdb> db.blogs.aggregate([{"$match":{"views":{"$gt":700}}}])
+
+trainingdb> db.blogs.aggregate([{"$match":{"views":{"$gt":500}}},{"$group":{"_id":"$author","totalScore":{"$sum":"$score"}}}])
+
+trainingdb> db.blogs.aggregate([{"$group":{"_id":"$author","totalScore":{"$sum":"$score"}}}])
+
+trainingdb> db.blogs.aggregate([{"$match":{"views":{"$gt":500}}},{"$group":{"_id":"$author","totalScore":{"$sum":"$score"}}},{"$sort":{"totalScore":-1}}])
+
+
+db.blogs.aggregate([{"$match":{"views":{"$gt":500}}},{"$group":{"_id":"$author","totalScore":{"$sum":"$score"}}},{"$sort":{"totalScore":-1}},{"$project":{"Author":"$_id",totalScore:1,"_id":0}}])
+
+trainingdb> db.blogs.aggregate([{"$match":{"views":{"$gt":500}}},{"$group":{"_id":"$author","totalScore":{"$sum":"$score"}}},{"$sort":{"totalScore":-1}},{"$replaceRoot":{"newRoot":{"Author":"$_id","TotalScore":"$totalScore"}}}])
+
+
+cat /etc/mongod.conf
+
+test> use company
+
+company> show collections
+
+company> db.employee.find()
+
+
+mongosh "mongodb://localhost:27017/trainingdb" --eval "db.blogs.find()"
+
+
+ mongosh "mongodb://localhost:27017/company" --eval "db.employee.find()"
+
+P@%%w0rd   ---- password for ubuntu
+
+create a database called testdb.
+within this create a table called sample which contains the following documents
+{"d":10,"e":20}
+{"d":12,"e":43}
+
+within sampledb, create another table called customer which contains the following documents
+{"custId":10222,"name":"Rajiv"}
+{"custId":10227,"name":"Amar"}
+{"custId":10229,"name":"Priya"}
+
+Display the content of these tables from terminal window with the following syntax:
+
+mongosh url --eval query
+
+
+sudo ls /var/lib/mongodb
+
+student@ubuntu:~/Desktop$ sudo systemctl stop mongod
+student@ubuntu:~/Desktop$ sudo systemctl status mongod
+
+
+student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data1
+   
+student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data2
+
+https://github.com/psnirmala/kyndrylmongodb21stsep2026.git
+
+
+
+
+
+
+
+

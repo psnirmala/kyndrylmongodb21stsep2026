@@ -1,0 +1,235 @@
+RDBMS:
+
+Uses structured tables with fixed schemas.
+
+RDBMS follows ACID rules for strict data consistency.
+
+RDBMS uses sql for query, joins, aggregation and etc.
+
+No sql:
+
+Uses flexible , non-tabular formats like documents or key-value pairs.
+
+NoSQL dbs are optimized to scale horizontally by adding more servers to a cluster.
+
+No sql dbs are not optimized for transaction.
+
+No sql uses varied query apis depending on the data model.\
+
+
+Mongodb uses javascript apis.
+
+
+JSON format:
+
+Java Script Object Notation.
+
+Lightweight text based data format used to store and transmit data.
+Collection key value pairs.
+
+{
+"id":235533,
+"name":"Ravichandran",
+"designation":"DBA"
+
+}
+
+Data types supported:
+
+String, Number , Boolean (true or false), Null, Array & Object(includes Date )
+
+employee={
+"id":235533,
+"name":"Ravichandran",
+"designation":"DBA",
+"address":{
+	"location":"Hebbal",	
+	"city":"Bangalore"	
+}
+}
+
+emp.id-----235533
+emp.name----"Ravichandran"
+emp.address.city---"Bangalore"
+
+NoSQL db usecases:
+
+Social media data
+Track user activity
+Logging Data
+Sensor Data
+
+
+
+
+Types of NoSQL dbs:
+
+1. key-value pair based-----Data is stored in key value pairs
+
+Examples: Redis, AWS Dynamo
+
+2. document oriented:
+Each row is stored as a document.
+The document is stored in json or xml format
+
+Examples: Mongodb, Couch DB, AWS Single DB
+
+
+3. Column Oriented database
+
+All the values of a single column are stored together.
+
+Examples: Cassandra, HBase
+
+4. Graph based database:
+
+Data is represented in the form of vertices of a graph.
+The relationship between the data is represented through the edges.
+
+Examples: Neo 4J, AWS Neptune
+
+Mongodb:
+
+Document Oriented NoSQL db which stores data in BSON(Binary Json) format.
+BSON is a binary encoded serialization format.
+
+It extends json to provide higher performance and richer data types like objectId, Date and binary data.
+
+Mongod process:
+
+Mongod is the core background daemon process for mongodb, responsible for managing data access, client connections and background operations like indexing and data manipulation.
+
+mongosh is the client shell to interact with the mongod process.
+
+default databases in mongodb:
+
+admin----contains security credentials and contains metadata of administrative operations.
+Stores the user accounts, system roles and permissions for the entire database cluster.
+local----stores metadata and internal data specific to the individual node in a replica set.
+config---used internally when setting up sharded cluster.
+
+In mongodb, physically a database or a collection need not be available to insert data.
+
+When the first row is inserted, the table is automatically created.
+
+When the first row in the first table is inserted, the db is automatically created.
+
+Mongodb follows camelCase naming convention.
+
+The first word will start with lowercase and subsequent words start with upper case.
+
+deptId
+insertOne
+updateOne
+
+
+_id is a special field used to uniquely identify every document in a collection.
+
+
+rdbms		mongodb
+
+database	database
+table		collection
+row		document
+column		field
+
+By default, mongodb uses an ObjectId as the value for _id field.
+
+An objectId is a 12 byte identifier designed to be unique.
+
+_id is automatically indexed.
+
+Mongodb automatically creates a unique index on _id.
+
+Mongodb does not allow you to update the _id field of an existing document.
+
+12 bytes structure
+4 bytes-------creation time (seconds)
+5 bytes-------random value-----------machine/process context
+3 bytes-------counter----------------makes the ids unique within the same second
+
+updating:
+
+$set------setting /adding value of a field
+$rename---renaming a field
+$unset---removes a field.
+$inc-----increase/decrease numeric value
+$push----add value to an array field
+
+$pull----remove a value from an array field
+
+
+Upsert-------update or insert
+
+If a matching document exists, it is updated.
+If no matching document exists, a new document is inserted.
+
+Mongodb Aggregation:
+
+Aggregation is used to process documents and produce calculated results similar to SQL's group by, sum, avg and etc.
+The aggregation pipeline uses multi stage process where documents pass through a series of transformations.
+
+aggregation pipeline stage operators:
+
+$match-----filters documents
+$group-----groups documents by a specific key
+$project---projecting specific fields
+$sort------ordering
+$unwind----deconstructs an array field.
+
+
+/etc/mongod.conf:
+
+This is the central configuration file of mongodb.
+It is used to manage the behavior, security , storage and network settings of mongod process.
+
+The /etc/mongod.conf file is in yaml format.
+
+yaml----yet another markup language
+
+#user profile info
+name:	Arvind
+age:	30
+address:
+	location: Hebbal
+	city	: Bangalore
+
+
+
+
+address.location----Hebbal
+address.city--------Bangalore
+
+
+dbPath-----location where data files for mongodb are stored.
+
+
+By default mongod uses port 27017.
+
+Running two instances of mongodb in a single machine.
+
+1. stop the default instance
+
+sudo systemctl stop mongod
+
+2. create the data directories of the two instances.
+
+student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data1
+   
+student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data2
+
+3. start the first instance in the default port(27017).
+
+open a new terminal tab and run the following command.
+
+sudo mongod --dbpath /var/lib/data1
+
+
+
+
+
+
+
+
+
+
