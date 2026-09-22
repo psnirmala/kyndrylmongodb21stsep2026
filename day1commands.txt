@@ -202,12 +202,53 @@ student@ubuntu:~/Desktop$ sudo systemctl stop mongod
 student@ubuntu:~/Desktop$ sudo systemctl status mongod
 
 
+Running two instances of mongodb in a single machine.
+
+1. stop the default instance
+
+sudo systemctl stop mongod
+
+2. create the data directories of the two instances.
+
 student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data1
    
 student@ubuntu:~/Desktop$ sudo mkdir /var/lib/data2
 
-https://github.com/psnirmala/kyndrylmongodb21stsep2026.git
+3. start the first instance in the default port(27017).
 
+open a new terminal tab and run the following command.
+
+sudo mongod --dbpath /var/lib/data1
+4. start the second instance in 27018 port 
+open a new terminal tab and run the following command.
+
+sudo mongod --dbpath /var/lib/data2 --port 27018
+
+6. start a mongosh client to first instance and add some data 
+
+mongosh
+
+use firstdb
+
+db.x.insertOne({"a":1,"b":2});
+db.x.insertOne({"a":2,"b":4});
+
+
+7. start a mongosh client to second instance and add some data 
+
+mongosh --port 27018
+
+use second
+
+db.y.insertOne({"m":11,"n":22});
+db.y.insertOne({"m":21,"b":24});
+
+8. verify from terminal
+
+
+mongosh "mongodb://localhost:27017/firstdb" --eval "db.x.find()"
+
+mongosh "mongodb://localhost:27018/seconddb" --eval "db.y.find()"
 
 
 
