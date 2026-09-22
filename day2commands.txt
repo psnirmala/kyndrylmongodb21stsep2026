@@ -1,0 +1,262 @@
+https://github.com/psnirmala/kyndrylmongodb21stsep2026
+
+student@ubuntu:~/Desktop$ sudo cp /etc/mongod.conf /etc/mongodinstance1.conf
+      
+student@ubuntu:~/Desktop$ sudo cp /etc/mongod.conf /etc/mongodinstance2.conf
+student@ubuntu:~/Desktop$ ls /etc/mongo*
+
+
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/mongodinstance1
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/mongodinstance2
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/log/mongodinstance1
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/log/mongodinstance2
+
+
+student@ubuntu:~/Desktop$/var/log/mongodinstance1
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/lib/mongodinstance2
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/log/mongodinstance1
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/log/mongodinstance2
+
+
+student@ubuntu:~/Desktop$ sudo cp /lib/systemd/system/mongod.service /lib/systemd/system/mongodinstance1.service
+       
+student@ubuntu:~/Desktop$ sudo cp /lib/systemd/system/mongod.service /lib/systemd/system/mongodinstance2.service
+
+change the ExecStart attribute to reflect the respective config files in these services
+
+
+student@ubuntu:~/Desktop$ sudo systemctl daemon-reload
+student@ubuntu:~/Desktop$ sudo systemctl start mongodinstance1
+student@ubuntu:~/Desktop$ sudo systemctl start mongodinstance2
+student@ubuntu:~/Desktop$ sudo systemctl status mongodinstance1
+
+
+alternate way of starting the instances
+
+mongod --config /etc/mongodinstance1.conf
+
+mongod --config /etc/mongodinstance2.conf
+
+
+from one terminal tab, start mongosh client to connect to the first service
+mongosh
+
+test> use firstdb
+switched to db firstdb
+firstdb> db.x.insertOne({"a":12,"b":34});
+
+firstdb> db.x.insertOne({"a":22,"b":14});
+
+from second terminal tab, start mongosh client to connect to the second service
+
+firstdb> db.getMongo()
+
+nextdb> db.getMongo()
+
+
+
+
+
+
+
+
+mongosh "mongodb://localhost:27018"
+
+test> use nextdb
+
+nextdb> db.y.insertOne({"m":12,"n":84});
+
+nextdb> db.y.insertOne({"m":10,"n":24});
+
+student@ubuntu:~/Desktop$ mongosh "mongodb://localhost:27017/firstdb" --eval "db.x.find()"
+
+student@ubuntu:~/Desktop$ mongosh "mongodb://localhost:27018/nextdb" --eval "db.y.find()"
+
+
+nextdb>db.shutdownServer()
+
+
+sudo mongod --dbpath /var/lib/mongodinstance2/ --port 27019
+
+mongosh "mongodb://localhost:27019/nextdb" --eval "db.y.find()"
+
+
+Create a third service with the following configuration.
+
+port ---- 27020
+data directory-----/var/lib/mongodbinstance3
+logfile ---- /var/log/mongodbinstance3/mongod.log
+
+connect to this instance using mongosh
+
+create a db called thirddb and a collection called c within it and insert some documents.
+
+
+verify from terminal window using the following command,
+
+mongosh "mongodb://localhost:27020/thirddb" --eval "db.c.find()"
+
+sudo mongod --dbpath /var/lib/mongodbinstance3 --logpath  /var/log/mongodbinstance3/mongod.log --port 27020
+
+firstdb> db.x.totalSize()
+
+firstdb> db.x.storageSize()
+
+sudo ls /var/lib/mongodinstance1/journal/
+db.shutdownServer()
+
+student@ubuntu:~/Desktop$ sudo systemctl start mongod
+student@ubuntu:~/Desktop$ sudo systemctl status mongod
+student@ubuntu:~/Desktop$ mongosh
+
+test> use trainingdb
+switched to db trainingdb
+trainingdb> show collections
+
+trainingdb> db.x.find()
+
+trainingdb> db.x.find().limit(5)
+trainingdb> db.x.find().skip(3)
+
+db.help()
+
+db.x.help()
+
+trainingdb> db.x.find().sort({"a":-1}).limit(3)
+
+trainingdb> for(var i=11;i<=100;i++) {db.x.insertOne({"a":i,"b":i*2});}
+
+trainingdb> db.x.countDocuments()
+
+rainingdb> page=1
+
+trainingdb> pageSize=10
+
+trainingdb> db.x.find().skip((page-1)*pageSize).limit(pageSize)
+trainingdb> ++page
+trainingdb> db.x.find().skip((page-1)*pageSize).limit(pageSize)
+
+
+
+trainingdb> for(i=1;i<=20000;i++) {db.users.insertOne({"userId":i,"userName":"User "+i});}
+
+trainingdb> db.users.find().limit(5)
+
+trainingdb> db.users.countDocuments()
+
+trainingdb> db.users.find({"userName": "User 101"});
+
+trainingdb> db.users.find({"userName": "User 101"}).explain("executionStats")
+
+trainingdb> db.users.getIndexes()
+
+trainingdb> db.users.createIndex({"userName":1});
+
+
+trainingdb> db.users.getIndexes()
+
+for(i=1;i<=20000;i++) {db.users.updateOne({"userId":i},{"$set":{"age":Math.floor(Math.random()*70)}});}
+
+another terminal window
+
+mongosh
+
+test> use trainingdb
+
+trainingdb> db.users.find().limit(5)
+
+db.users.find({"age":2******plain("executionStats")
+
+trainingdb> db.users.find({"age":25}).sort({"userName":1}).explain("executionStats")
+
+
+trainingdb> db.users.createIndex({"age":1,"userName":1})
+
+trainingdb> db.users.find({"age":25}).sort({"userName":1}).explain("executionStats")
+
+
+
+
+mongorestore "mongodb://localhost:27017" /home/student/geojsondata/
+
+
+geo> db.states.find().limit(1)
+
+geo> db.airports.find().limit(3)
+
+
+geo> db.states.find({},{"_id":0,"loc":0}).limit(10)
+
+
+geo> var paLoc=db.states.findOne({"code":"PA"}).loc
+
+geo> db.airports.find({"loc":{"$geoWithin":{"$geometry":paLoc}}});
+
+geo> db.airports.find({"$and":[{"loc":{"$geoWithin":{"$geometry":paLoc}}},{"type":"International"}]},{"_id":0,"loc":0});
+geo> db.states.find({"$and":[{"loc":{"$geoIntersects":{"$geometry":paLoc}}},{"code":{"$ne":"PA"}}]},{"_id":0,"loc":0});
+geo> db.states.find({"$and":[{"loc":{"$geoIntersects":{"$geometry":paLoc}}},{"code":{"$ne":"PA"}}]},{"_id":0,"loc":0}).explain("executionStats")
+
+geo> db.states.createIndex({"loc":"2dsphere"});
+
+geo> db.states.find({"$and":[{"loc":{"$geoIntersects":{"$geometry":paLoc}}},{"code":{"$ne":"PA"}}]},{"_id":0,"loc":0}).explain("executionStats")
+
+geo> use sampledb
+switched to db sampledb
+sampledb> db.transaction.insertOne({"description":"transaction-23222","createdAt":ISODate()});
+
+sampledb> db.transaction.insertOne({"description":"transaction-232555","createdAt":ISODate()});
+
+sampledb> db.transaction.insertOne({"description":"transaction-232556","createdAt":ISODate()});
+sampledb>db.transaction.find()
+sampledb> db.transaction.createIndex({"createdAt":1},{"expireAfterSeconds":120});
+sampledb>db.transaction.find()
+
+sampledb> db.transaction.insertOne({"description":"transaction-232567","createdAt":ISODate()});
+
+sampledb> db.transaction.find()
+
+sampledb> for(var i=1;i<=20000;i++) {db.accounts.insertOne({"accNo":100000+i,"balance":Math.random()*50000})}
+
+
+mongosh
+
+test> use sampledb
+switched to db sampledb
+sampledb> show collections
+
+sampledb> db.stats()
+
+
+sampledb> db.serverStatus()
+sampledb> db.serverStatus().connections
+sampledb> db.serverStatus().opcounters
+sampledb> db.serverStatus().network
+db.serverStatus().mem
+
+sampledb> db.currentOp()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

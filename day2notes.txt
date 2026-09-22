@@ -1,0 +1,263 @@
+Running two instances of mongod using config file.
+
+1. create two copies of the default config file(/etc/mongod.conf) and rename them as /etc/mongodinstance1.conf and /etc/mongodinstance2.conf
+
+student@ubuntu:~/Desktop$ sudo cp /etc/mongod.conf /etc/mongodinstance1.conf
+      
+student@ubuntu:~/Desktop$ sudo cp /etc/mongod.conf /etc/mongodinstance2.conf
+student@ubuntu:~/Desktop$ ls /etc/mongo*
+
+
+2. create the data and log directories for the two instances
+
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/mongodinstance1
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/mongodinstance2
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/log/mongodinstance1
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/log/mongodinstance2
+
+3. assign ownership of data and log directories to the mongodb system user.
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/lib/mongodinstance1
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/lib/mongodinstance2
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/log/mongodinstance1
+student@ubuntu:~/Desktop$ sudo chown -R mongodb:mongodb /var/log/mongodinstance2
+
+4. Configure these data and log directories in the config files of the respective instance.
+
+5. create two service config files.
+
+student@ubuntu:~/Desktop$ sudo cp /lib/systemd/system/mongod.service /lib/systemd/system/mongodinstance1.service
+       
+student@ubuntu:~/Desktop$ sudo cp /lib/systemd/system/mongod.service /lib/systemd/system/mongodinstance2.service
+
+
+6. configure the services to use the respective config files.
+
+7. reload the services and start them
+student@ubuntu:~/Desktop$ sudo systemctl daemon-reload
+student@ubuntu:~/Desktop$ sudo systemctl start mongodinstance1
+student@ubuntu:~/Desktop$ sudo systemctl start mongodinstance2
+student@ubuntu:~/Desktop$ sudo systemctl status mongodinstance1
+student@ubuntu:~/Desktop$ sudo systemctl status mongodinstance2
+
+
+Common files available in the data directory:
+
+mongod.lock-------small lock file which prevents multiple mongod server instances from using the same data directory simultaneously.
+
+WiredTiger.lock------storage engine level lock file
+
+A storage engine manages how the data is handled, organized and saved in memory and disk.
+
+Common storage engines:
+
+WiredTiger(default)-----provides document level locking allowing multiple clients to update different documents concurrently.
+
+In-Memory---------Non Persistent
+
+MMAPv1-----Deprecated and used in legacy systems.
+
+The wt files used by database do not have any fixed initial or maximum size.
+Instead, they dynamically grow based on your data.
+
+WiredTiger uses a default internal block allocation size of 4 KB.
+
+_mdb_catalog.wt----internal name space directory. It contains the mapping between the table and index.
+WiredTiger.turtle---text file which contains initialization settings to read WiredTiger.wt file.
+
+db.collection.totalSize()----returns compressed data plus all indexed sizes combined.
+
+db.collection.storageSize()---returns the actual allocated space on disk(reflects wired tiger compression).
+
+
+Journaling:
+
+Journaling in mongodb is a write-ahead logging feature that records data modifications(inserts, updates and deletes) to an on-disk journal file before they are applied to the actual database files.
+It guarantees data durability and recovery if the server crashes unexpectedly.
+
+					Application
+					   |
+					   v
+					mongod
+					   |
+					   v
+					wired tiger
+					   |
+				 	   v
+					Journal-------->durable recovery information
+					   |
+					   V
+					Data Files
+
+
+
+when there is a server crash and if it restarts
+
+					mongod process starts
+						|
+						v
+					read database files
+						|
+						v
+					check journal recovery information
+						|
+						V
+					replay the necessary operation from journal
+						|
+						v
+					brings databases to consistent state
+						|
+						V
+					mongodb server becomes available
+
+
+In the mongodb data directory,
+
+		database files----contain existing data
+		journal-----------contain information about recent changes
+
+Journaling follows the idea of write-ahead logging(WAL)---ie before changing the actual database files, it records the change in a log.
+
+
+
+skip() and limit():
+
+Skip() skips a number of documents and limit() restricts how many documents are returned.
+
+
+Indexing:
+
+A database index is similar to a book's index.
+
+Instead of looking through the whole book, we  take a shortcut to navigate to the exact page using book's index.
+
+Similarly, mongodb takes a shortcut and look at an ordered list with references to the data.
+
+This allows the clients to query the db with high performance.
+
+A query that does not use an index is called a collection scan which means the server has to look through the whole table to find a query's result.
+
+By default, for the _id column, mongodb automatically creates an index.
+
+
+executionStatistics:
+nReturned----number of documents returned
+totalKeysExamined----number of index entries examined
+totalDocsExamined----number of documents examined
+
+
+
+compound index:
+
+Index on multiple fields is called a compound index in mongodb.
+The order of fields in a compound index is very important when designing mongodb indexes.
+The first field in the compound should be the field on which the equality query is fired.
+
+Geo Spatial indexes:
+
+Geo spatial indexes are used to work with geo spatial data.
+
+Geo spatial data are collections information linked to specific locations on earth, combining spatial co-ordinates(latitude/longitude) with descriptive attributes.
+
+In mongodb, we use geojson data type for storing geospatial data.
+mongodb supports 3 types of geojson data types:
+
+1. Point-----represents a specific location like a restaurant/hospital. 
+{
+"type":"Point",
+"coordinates":[-2.343533,47.522231]
+}
+2. LineString---distance between two points---a nice walk on the beach
+{
+"type":"LineString",
+"coordinates":[[-2.343533,47.522231],[-2.544454,21.452233]]
+}
+
+
+3. Polygon------array of points connected together--- Mumbai city
+
+{
+"type":"Polygon",
+"coordinates":[
+[-2.343533,47.522231],
+[-2.544454,21.452233],
+[-7.3255355,23.325555]
+]
+}
+
+Indexes supported for geo json data:
+
+1. 2d index --------use simple co-ordinates(longitude,latitude)----can be used only when data is in points
+2. 2d sphere index----used with point, linestring and polygons
+
+queries supported by geojson data in mongodb:
+
+1. inclusion
+2. intersection
+3. proximity
+
+
+inclusion:
+
+Whether a polygon contains a point, line and etc.
+
+Example:
+
+Find all international airports within the state California.
+
+$geoWithin operator is used for inclusion query.
+
+
+intersection:
+
+finds out coordinates that intersects with coordinates of a specific polygon.
+
+Example:
+What are adjacent states to Pensylvania?
+
+$geoIntersecs operator is used for intersection query.
+
+
+
+TTL index:
+
+TTL-Time To Live
+
+TTL indexes are used to automatically remove documents from a collection after a certain amount of time.
+
+Use cases:
+Session Management(Automatically deleting user session after a period of inactivity)
+Log and Audit data retention
+OTP notification expiry
+cache invalidation
+
+Monitoring:
+
+Monitoring is a key part of database administration as it allows you to understand the performance and overall health of your database.
+
+Monitoring also helps you to diagnose issues with applications using the db queries that cause bottlenecks.
+
+db.stats()------prints the overall statistics of the database
+
+objects----total number of documents
+avgObjectSize-----average size of the document in bytes
+
+
+db.serverStatus()----returns detailed runtime and operational statistics about the mongodb server.
+It is mainly used for monitoring, troubleshooting and performance analysis.
+
+
+
+
+
+
+
+ 	
+
+
+
+
+
+
+
+
+
