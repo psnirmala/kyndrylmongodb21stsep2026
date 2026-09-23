@@ -1,0 +1,213 @@
+https://github.com/psnirmala/kyndrylmongodb21stsep2026
+
+sampledb> db.stats(1024*1024)
+student@ubuntu:~/Desktop$ mongostat "mongodb://localhost:27017"
+
+sampledb> for(var i=20001;i<=40000;i++) {db.accounts.insertOne({"accNo":100000+i,"balance":Math.random()*50000})}
+student@ubuntu:~/Desktop$ mongostat "mongodb://localhost:27017" 10
+sampledb> for(var i=40001;i<=60000;i++) {db.accounts.insertOne({"accNo":100000+i,"balance":Math.random()*50000})}
+mongostat "mongodb://localhost:27017" 10 --rowcount 5
+
+
+mongotop "mongodb://localhost:27017" 10
+
+
+sampledb> for(var i=60001;i<=80000;i++) {db.accounts.insertOne({"accNo":100000+i,"balance":Math.random()*50000})}
+sampledb> for(var i=100001;i<=120000;i++) {db.accounts.insertOne({"accNo":100000+i,"balance":Math.random()*50000})}
+
+
+mongotop "mongodb://localhost:27017" |grep 'sampledb'
+sampledb> db.accounts.find({"accNo":191214})
+
+sampledb> db.accounts.find({"accNo":191214}).explain("executionStats")
+
+
+sampledb> db.setProfilingLevel(1,{"slowms":100});
+
+sampledb> db.accounts.find({"accNo":191214})
+
+sampledb> db.accounts.find({"accNo":190000})
+
+
+sampledb> db.system.profile.find()
+
+
+sampledb> db.accounts.createIndex({"accNo":1});
+
+sampledb>db.accounts.getIndexes()
+
+sampledb> db.accounts.dropIndex("accNo_1")
+
+sampledb> db.system.profile.countDocuments()
+
+sampledb> db.accounts.find({"accNo":190002});
+sampledb> db.system.profile.countDocuments()
+sampledb> db.accounts.find({"accNo":190252});
+sampledb> db.system.profile.countDocuments()
+//disables profiling
+sampledb> db.setProfilingLevel(0)
+
+sampledb> db.accounts.find({"accNo":190003});
+sampledb> db.accounts.find({"accNo":190011});
+sampledb> db.accounts.find({"accNo":190013});
+sampledb> db.system.profile.countDocuments()
+
+student@ubuntu:~/Desktop$ sudo cat /etc/mongod.conf
+
+student@ubuntu:~/Desktop$ sudo cat /var/log/mongodb/mongod.log
+
+sampledb> db.adminCommand({"logRotate":1})
+
+sudo touch /etc/logrotate.d/mongodb
+
+content of /etc/logrotate.d/mongodb
+
+/var/log/mongodb/mongod.log {
+  rotate 7
+  daily
+  size 100M
+  compress
+  missingok
+  notifempty
+}
+sudo logrotate -vf /etc/logrotate.d/mongodb 
+from mongosh,
+db.shutdownServer()
+
+from terminal start the mongodb server in secure mode using the following command,
+
+sudo mongod --dbpath /var/lib/mongodb --auth
+
+test> show dbs
+
+test> db.x.insertOne({"a":20});
+
+sudo mongod --dbpath /var/lib/mongodb 
+
+admin> db.createUser({"user":"superUser","pwd":passwordPrompt(),"roles":[{"role":"root","db":"admin"}]});
+
+admin> show collections
+
+
+admin> db.system.users.find()
+
+db.shutdownServer()
+
+student@ubuntu:~/Desktop$ sudo mongod --dbpath /var/lib/mongodb --auth
+
+student@ubuntu:~/Desktop$ mongosh -u superUser -p 
+
+
+test> use admin
+switched to db admin
+admin> db.getUsers()
+admin> db.runCommand({"connectionStatus":1})
+
+admin> db.createUser({"user":"user1","pwd":"pass1","roles":[{"role":"readWrite","db":"appdb"}]});
+
+admin> db.getUsers()
+
+admin> db.system.users.find()
+admin> db.runCommand({"connectionStatus":1})
+
+
+student@ubuntu:~/Desktop$ mongosh -u user1 -p 
+
+
+test> use appdb
+switched to db appdb
+appdb> db.a.insertOne({"x":20});
+
+appdb> db.a.insertOne({"x":30});
+
+appdb> show dbs
+
+appdb> db.a.find()
+
+appdb> db.runCommand({"connectionStatus":1})
+appdb> use nextdb
+
+nextdb> db.b.insertOne({"x":11});   //fails because the current user does not have any permission on nextdb
+
+admin> use securitydb
+switched to db securitydb
+securitydb> db.createUser({"user":"user2","pwd":passwordPrompt(),"roles":[{"role":"readWrite","db":"appdb"}]});
+
+securitydb> db.getUsers() //will show only user2
+securitydb> show collections
+
+securitydb> use admin
+switched to db admin
+admin> db.system.users.find() //will show superUser,user1 and user2
+
+admin>db.getUsers() //will show only superUser and user1
+
+student@ubuntu:~/Desktop$ mongosh -u user2 -p
+
+student@ubuntu:~/Desktop$ mongosh -u user2 -p  -authenticationDatabase securitydb
+
+Exercise:
+
+create a user called user3 under usersdb.
+Let this user has readWrite role on firstdb.
+use db.getUsers() to verify wheter this user is created under usersdb.
+
+Also retrieve the user information from system.users collection of admin db.
+
+Login as user3 and try to add some data into firstdb and retrieve it.
+
+Try to add some data to seconddb and it will fail.
+
+
+admin> db.changeUserPassword("user1","Password@1")
+
+
+student@ubuntu:~/Desktop$ mongosh -u user1 -p Password@1
+admin> db.getUser("user1")
+
+admin> db.updateUser("user1",{
+ "pwd":"pass1","roles":[{"role":"readWrite","db":"firstdb"},{"role":"read","db":"seconddb"}]});
+
+admin> db.grantRolesToUser("user1",[{"role":"readWrite","db":"thirddb"},{"role":"read","db":"fourthdb"}])
+
+admin> db.getUser("user1")
+
+admin> db.revokeRolesFromUser("user1",[{"role":"readWrite","db":"thirddb"}])
+
+admin> db.getUser("user1")
+
+admin> db.updateUser("user1",{"roles":[{"role":"readWriteAnyDatabase","db":"admin"}]})
+{ ok: 1 }
+admin> db.getUser("user1")
+admin> db.getRoles({"showBuiltinRoles":true})
+admin> use firstdb
+
+firstdb> db.getRoles({"showBuiltinRoles":true})
+
+company> use admin
+switched to db admin
+admin> db.createRole({"role":"employeeReadWrite", "privileges":[{"resource":{"db":"fifthdb","collection":"employee"},"actions":["find","insert","update","remove"]}],"roles":[]})
+admin> db.grantRolesToUser("user1",[{"role":"employeeReadWrite","db":"admin"}]);
+
+sudo mongod --dbpath /var/lib/mongodb
+
+student@ubuntu:~/Desktop$ mongodump --uri="mongodb://localhost:27017" --out /home/student/mongoalldbbackup
+
+student@ubuntu:~/Desktop$ ls -R /home/student/mongoalldbbackup/
+
+student@ubuntu:~/Desktop$ mongodump --uri="mongodb://localhost:27017" --out /home/student/trainingbackup --db trainingdb 
+
+student@ubuntu:~/Desktop$ mongodump --uri="mongodb://localhost:27017" --out /home/student/trainingblogbackup --db trainingdb --collection blogs 
+
+trainingdb> db.dropDatabase()
+
+
+mongorestore  /home/student/trainingbackup/
+
+student@ubuntu:~/Desktop$ mkdir /home/student/archivebackup/
+student@ubuntu:~/Desktop$ mongodump --db sampledb --archive=/home/student/archivebackup/sample.gz --gzip
+trainingdb> use sampledb
+switched to db sampledb
+sampledb> show collections
+sampledb> db.accounts.drop()
+

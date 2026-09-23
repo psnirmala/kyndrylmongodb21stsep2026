@@ -1,0 +1,201 @@
+mongostat:
+Command line monitoring tool that gives you real time view of mongodb server activity.
+
+vsize----virtual memory
+
+res----resident memory----approximately how much physical rm is currently used for mongodb process
+
+dirty,used-----indicate wiredtiger cache related information.
+
+A high dirty percentage indicates that a lot of modified data is waiting to written.
+
+conn-----number of client connects
+
+net_in, net_out-----network traffic
+
+net_in----data received by mongodb
+net_out---data sent by mongodb
+
+qrw---queued readers | queued writes
+
+arw---active read and write operations
+
+
+mongotop: command line tool that outputs a list of all the collections in the database, accompanied by the time spent on reads, writes and in total within the time window.
+
+mongodb database profiler:
+
+The database profiler is used to identify slower queries.
+
+profiling levels:
+
+1----enables the profiler only on slower queries which takes more time than the threshold
+2----enables the profiler for all queries
+0----disables the profiler
+
+
+The slower queries are written special called system.profile.
+
+Mongodb Logging:
+
+Records server events, operations and server health metrics to help admins diagnose performance issues and secure deployments.
+
+important fields in logfile
+
+t---timestamp
+s---severity
+c---component
+id--log message id
+ctx--context/thread
+msg--message
+attr--additional details
+
+c:"WTCHKPT" ---- wired tiger checkpoint
+
+
+wired tiger checkpoint is a process where mongodb creates a consistent on-disk snapshot of the database state.
+
+Checkpoint is not same thing as journal.
+
+Application
+    |
+    V
+ mongodb server
+    |
+    V
+ wiredtiger cache
+    |
+    V
+ Journal<-------durability/recovery
+    |
+    V
+ Checkpoint
+    |
+    V
+   Data File
+
+Journal----records changes for recovery
+Checkpoint---periodically persists consistent database state to the data files.
+
+Common values for c: in logfile
+
+NETWORK-----network/connections
+STORAGE-----storage/wiredtiger
+COMMAND-----database command
+ACCESS------authentication/authorization
+REPL--------replication
+QUERY-------find queries
+INDEX-------index operations
+CONTROL-----server control operations
+SHARDING----sharding related activity
+
+content of /etc/logrotate.d/mongodb
+
+rotate 7----maintain 7 old log files
+size 100M---rotate the log reaches approximately 100 mb
+daily --- rotate the log once per day
+
+when both daily and size attributes are available, logrotate considers both time and size.
+Within the specific time if size exceeds, a rotation happens.
+
+compress----compresses the log
+
+missingok----if the mongodb log does not exist, it is not reported as an error
+
+notifempty--- if the log file is empty, don't rotate
+
+security:
+By default, mongodb provides unauthenticated acces.
+
+admin:
+The admin database is a privileged, built-in system database used exclusively for user authentication and authorization.
+
+The credentials are stored in a special collection called system.users with admin database.
+
+Authentication Database is the database within which a user is created.
+
+To authenticate using the respective user, -authenticationDatabase dbname should be used mongosh.
+
+admin is the default authenticationDatabase.
+If the authenticationDatabase is other than admin, explicitly -authenticationDatabase option should be used.
+
+
+
+authenticationDatabase is the database where mongodb authenticates the user while system.users is an internal collection within admin db ,used by mongodb  to store user information created in all databases.
+
+mongosh -u user1 -p 
+
+is equivalent to 
+
+mongosh -u user1 -p -authenticationDatabase admin
+
+predefined mongodb rules:
+
+
+read-------read data----query , run aggregation, read indexes/metadata
+readWrite-----read and modify data----find, insert , update, delete
+dbAdmin------database admin privileges----index related admin, database statistics, database metadata
+userAdmin----manage users and roles for a db---create , update users
+dbOwner-----readWrite + dbAdmin + userAdmin
+clusterMonitor---monitor the cluster
+clusterManager---manage cluster level operations
+
+clusterAdmin----clusterMonitor + clusterMangaer
+
+backup-----privileges need to perform mongodb backups
+restore---privileges need to perform restore from mongodb backup
+
+root-----dbAdmin + clusterAdmin+backup+restore
+
+
+
+special roles for specific features
+
+readAnyDatabase
+readWriteAnyDatabase
+userAdminAnyDatabase
+dbAdminAnyDatabase
+
+
+updateUser can change both password and roles---specifying roles replaces existing roles.
+changePassword can change only the password.
+grantRolesToUser----Adds roles keeping existing roles
+revokeRolesFromUser---removes a role from the list of roles
+
+user defined role:
+
+User defined roles are used to give exactly the privileges your application or user needs.
+
+For example instead of giving readWrite permission on company db, your can provide readWrite permission only on employee collection in company db.
+
+Mongodb backup and recovery:
+
+method				tool/approach			best for
+
+logical binary backup		mongodump			small/medium databases
+logical binary restore		mongorestore			restoring dumps
+oplog backup			oplog.rs			point in time recovery
+file system snapshot		volume/storage snapshot		large databases
+mongo atlas backup		atlas backup			managed deployments
+logical backup to text csv,	mongoexport			backup to text files
+json files
+restore from csv,json		mongoimport			import csv,json files
+
+mongodump: 
+	Tool used to export mongodb data into bson files. It is commonly used for backups that can later
+be restored using mongorestore.
+
+
+
+
+
+
+
+
+
+
+
+
+			
+
+
