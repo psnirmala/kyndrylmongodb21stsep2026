@@ -1,0 +1,414 @@
+
+
+Filesystem snapshot backup:
+
+From the data directory, the backup is created.
+
+For this backup to work, either the server is down or the database is locked.
+
+db.fsyncLock() is used to lock the database and flush all pending writes to disk for backup operations.
+
+db.fsyncLock() performs
+
+1. forces all in-memory data to be written(synced) to disk
+2. locks all dbs to prevent any further writes
+3. keeps the data in a consistent state for filesystem snapshot backup
+
+
+
+file system snapshot backup
+
+steps:
+
+1. start the mongodb instance
+
+student@ubuntu:~/Desktop$ sudo mkdir /var/lib/testinstance1
+   
+student@ubuntu:~/Desktop$ sudo mongod --dbpath /var/lib/testinstance1/
+
+2. add some sample data
+
+trainingdb> use testdb
+
+testdb> db.employee.insertOne({"empId":232355,"name":"Ramesh Arvind","designation":"DBA"});
+
+testdb> db.employee.insertOne({"empId":232356,"name":"Ashok Nirni","designation":"Developer"});
+
+3. shutdown the server
+
+testdb> db.shutdownServer()
+
+4. take the physical snapshot 
+
+student@ubuntu:~/Desktop$ mkdir -p /home/student/backups/snapshot-1
+student@ubuntu:~/Desktop$ sudo cp -r /var/lib/testinstance1/* /home/student/backups/snapshot-1
+
+
+5. restart server 
+
+from terminal run the following command,
+
+sudo mongod --dbpath /var/lib/testinstance1/ 
+
+6. in mongosh, make some changes
+testdb> show dbs
+
+testdb> show collections
+employee
+testdb> db.employee.find()
+
+testdb>db.dropDatabase()
+
+7. shutdown the server
+testdb> db.shutdownServer()
+
+8. restore from the snapshot
+
+student@ubuntu:~/Desktop$ sudo rm -rf /var/lib/testinstance1/
+[sudo: authenticate] Password:         
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/testinstance1/
+student@ubuntu:~/Desktop$ sudo cp -r /home/student/backups/snapshot-1/* /var/lib/testinstance1/
+
+9. restart the service
+
+sudo mongod --dbpath /var/lib/testinstance1/
+
+10.from mongosh run the following commands to verify whether data is restored
+testdb> show dbs
+
+testdb> show collections
+employee
+testdb> db.employee.find()
+
+
+
+
+third party tools used with mongodb for backup:
+
+Cohesity
+Rubrik
+Nutanix
+Percona backup for mongodb
+
+
+
+
+
+using fsynclock
+
+1. lock the db 
+testdb> db.fsyncLock()
+
+2. take a backup
+from terminal,
+
+student@ubuntu:~/Desktop$ sudo mkdir -p /home/student/backups/snapshot-fsync-1
+student@ubuntu:~/Desktop$ sudo cp -r /var/lib/testinstance1/* /home/student/backups/snapshot-fsync-1/
+
+3. make some changes in the db
+
+testdb> db.fsyncUnlock()
+testdb> db.employee.drop()
+
+4. shutdown server
+
+db.shutdownServer()
+
+5. restore the data directory
+
+
+student@ubuntu:~/Desktop$ sudo rm -r /var/lib/testinstance1
+student@ubuntu:~/Desktop$ sudo mkdir -p /var/lib/testinstance1/
+student@ubuntu:~/Desktop$ sudo cp -r /home/student/backups/snapshot-fsync-1/* /var/lib/testinstance1/
+
+
+6. restart the server
+
+
+sudo mongod --dbpath /var/lib/testinstance1/
+
+
+
+7. from mongosh run the following commands to verify whether data is restored
+testdb> show dbs
+
+testdb> show collections
+employee
+testdb> db.employee.find()
+
+
+
+replication:
+
+Replication is the process of maintaining multiple copies of the same data on different database servers.
+
+It provides high availability, fault tolerance and data redundancy.
+
+Mongodb uses a replica set(commonly called replica) which is a group of mongodb servers that maintain the same data.
+
+A replica set typically contains 1 primary node and multiple secondary nodes.
+
+primary node
+	-----receives all write requests
+	-----serves read requests also
+
+secondary node(s)
+	--------continuously copy(replicate) data from primary using oplogs(operation logs)
+	--------can serve only read operations
+
+arbiter (optional)
+	---------does not store any data
+	---------participates only in elections to choose a new primary
+
+
+replica set with 3 nodes:
+
+		port		dbpath				logpath
+server-1	27017		/var/lib/replica-data-1		/var/log/replica-log-1/mongod.log
+
+server-2	27018		/var/lib/replica-data-2		/var/log/replica-log-2/mongod.log
+
+server-3	27019		/var/lib/replica-data-3		/var/log/replica-log-3/mongod.log
+
+All the 3 servers will be part of a replica-set called test-replica-set.
+
+steps:
+
+1. stop any mongod or mongosh instances if they running
+2. create the data directories for each instance
+
+sudo mkdir -p /var/lib/replica-data-1	
+sudo mkdir -p /var/lib/replica-data-2	
+sudo mkdir -p /var/lib/replica-data-3	
+
+3. create the log directories for each instance
+
+sudo mkdir -p /var/log/replica-log-1	
+sudo mkdir -p /var/log/replica-log-2	
+sudo mkdir -p /var/log/replica-log-3
+
+4. start the 3 instances in 3 different terminal tabs.
+
+sudo mongod --port 27017 --dbpath /var/lib/replica-data-1/ --logpath /var/log/replica-log-1/mongod.log --replSet test-replica-set
+sudo mongod --port 27018 --dbpath /var/lib/replica-data-2/ --logpath /var/log/replica-log-2/mongod.log  --replSet test-replica-set
+
+sudo mongod --port 27019 --dbpath /var/lib/replica-data-3/ --logpath /var/log/replica-log-3/mongod.log  --replSet test-replica-set
+
+
+5. start the mongosh clients for these instances in 3 different terminal tabs
+
+
+mongosh
+mongosh --port 27018
+mongosh --port 27019
+
+6. From the mongoshell of 27017, run the following commands.
+
+from mongoshell of 27017,
+
+test> rs.initiate()
+test-replica-set [direct: primary] test> rs.add("localhost:27018")
+
+test-replica-set [direct: primary] test> rs.add("localhost:27019")
+
+test-replica-set [direct: primary] test> rs.status()
+
+7. from the mongosh client of localhost:27018 or localhost;27019, run the following command
+
+test-replica-set [direct: secondary] test> db.customer.insertOne({"custId":233222,"name":"Rajiv"});
+
+//fails because secondary servers do not allow write
+
+8.from the mongosh client of localhost:27017, run the following command
+
+test-replica-set [direct: primary] test> db.customer.insertOne({"custId":233222,"name":"Rajiv"});
+
+//succeeds because it is primary
+
+This data will be replicated in both the secondaries.
+
+
+The secondary servers get the new data through replication from the primary.
+
+				Application
+			    	     |
+				     V
+				  Primary
+				     |
+				     v
+				  1.write operation is recorded in oplog and data is updated in primary
+				     |
+				     v
+				   local.oplog.rs
+				     |
+				     v
+				  2. secondary server continuously reads oplog of primary and updates
+				     |		     its own local.oplog.rs		
+			 	     v
+				  3. secondary server replays the update commands recorded in its oplog
+				     |
+				     v
+				  4. Data is updated in secondary
+
+
+when the primary server is down, one of the secondary servers is elected as the primary server.
+
+Priority tells mongodb which eligible node should be preferred to become primary during an election.
+
+
+priority		meaning
+ 0			can never become primary---also called a passive node
+ 1			normal/default priority
+ 5			more preferred
+ 10			highly preferred
+
+
+
+Priority is a preference, not a guarantee.
+
+
+
+Point in time recovery:
+
+Point In Time recovery is restoring a database to a specific moment in time rather than simply restoring the latest backup.
+
+Full backup + oplog changes = restore to a chosen timestamp
+
+sample steps:
+
+1. full back up taken at 2:00 pm
+2. normal database activity continues
+3. someone accidentally deletes data at 2:30 pm
+4. you want the database as it existed at 2:29:59 pm
+
+Mongodb can use the backup plus the oplog to replay operations up to that point.
+
+steps:
+
+1. create the data directory for the single node replica
+
+sudo mkdir -p /var/lib/singlenodereplicadata
+
+2. start the node
+
+student@ubuntu:~/Music$ sudo mongod --dbpath /var/lib/singlenodereplicadata --replSet test-backup-replica
+
+3. start a mongoshell to localhost:27017 and initialize the replica set
+
+mongosh
+
+test>rs.initiate()
+
+4. add some sample data
+
+test-backup-replica [direct: primary] test> use firstdb
+switched to db firstdb
+test-backup-replica [direct: primary] firstdb> db.employee.insertOne({"empId":23222,"name":"Raghav","designation":"Developer"});
+
+test-backup-replica [direct: primary] firstdb> use seconddb
+switched to db seconddb
+test-backup-replica [direct: primary] seconddb> db.customer.insertOne({"custId":34311,"name":"Deva"});
+
+
+5. Take a full backup.
+tudent@ubuntu:~/Music$ mongodump --host localhost:27017 --out /home/student/fullback/1
+ls -R  /home/student/fullback/1
+
+6. Find out the latest time stamp after which the backup was taken
+test-backup-replica [direct: primary] local> db.oplog.rs.find({"ns":"seconddb.customer"})
+
+test-backup-replica [direct: primary] local> db.oplog.rs.find({"ns":"firstdb.employee"})
+
+notedown the ts column value which has the latest timestamp.
+
+for example ts:1790246444 is the value after which the full backup was taken.
+
+7. Now add some documents
+
+test-backup-replica [direct: primary] local> use firstdb
+switched to db firstdb
+test-backup-replica [direct: primary] firstdb> db.employee.insertOne({"empId":23223,"name":"Girinath","designation":"DBA"});
+
+test-backup-replica [direct: primary] firstdb> use seconddb
+switched to db seconddb
+test-backup-replica [direct: primary] seconddb> db.customer.insertOne({"custId":34314,"name":"Priya"});
+
+
+8. now perform a oplog backup after timestamp noted down in step 6.
+
+mongodump --host localhost:27017 --db local --collection oplog.rs --query '{"ts":{"$gt":{"$timestamp":{ "t": 1790246444, "i": 2 }}}}' --out /home/student/oplogbackup-1
+
+
+9. from the mongoshell , drop both firstdb and seconddb
+
+ test-backup-replica [direct: primary] seconddb> db.dropDatabase()
+{ ok: 1, dropped: 'seconddb' }
+test-backup-replica [direct: primary] seconddb> use firstdb
+switched to db firstdb
+test-backup-replica [direct: primary] firstdb> db.dropDatabase()
+{ ok: 1, dropped: 'firstdb' }
+
+
+test-backup-replica [direct: primary] firstdb> show dbs
+
+10. now restore from the full backup.
+
+student@ubuntu:~/Music$ mongorestore --uri "mongodb://localhost:27017" /home/student/fullback/1
+
+11. from the mongoshell, check whether the data is restored from full backup
+
+test-backup-replica [direct: primary] firstdb> use firstdb
+
+test-backup-replica [direct: primary] firstdb> show collections
+employee
+test-backup-replica [direct: primary] firstdb> db.employee.find()
+test-backup-replica [direct: primary] firstdb> use seconddb
+
+test-backup-replica [direct: primary] seconddb> db.customer.find()
+
+12. restore the latest data by replaying the latest oplog content.
+
+mongorestore --uri "mongodb://localhost:27017" --oplogReplay /home/student/oplogbackup-1
+
+13. check whether the latest data is available by executing the following commands.
+
+test-backup-replica [direct: primary] firstdb> use firstdb
+
+test-backup-replica [direct: primary] firstdb> show collections
+employee
+test-backup-replica [direct: primary] firstdb> db.employee.find()
+test-backup-replica [direct: primary] firstdb> use seconddb
+
+test-backup-replica [direct: primary] seconddb> db.customer.find()
+
+Sharding:
+
+Sharding is a method distributing data across multiple replicas.
+
+If a single table contains 1,00,000 records and if there are two replicas which are part of sharding, each replica may approximately contain 50,000 records each.
+
+replica-a------nodes 11,12,13------asian-----may contain data where continent is asia
+replica-b------nodes 21,22,23------europe----may contain data where continent is Europe
+				|----replica-1
+client-------shardingserver-----|
+				|----replica-b
+
+
+Sharding is a horizontal scaling method that distributes data across multiple replicas to handle very large datasets and high throughput operations.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
