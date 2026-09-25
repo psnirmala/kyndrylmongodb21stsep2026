@@ -1,0 +1,204 @@
+Core components of the sharded cluster:
+
+1. shard----stores a subset of the data, ideally configured as a replica set.
+	commonly called shard replica.
+	In a single cluster, there will be multiple shard replicas.
+
+2. mongos(query router)----routes the queries from the applications to the appropriate shard.
+3. config servers----------store metadata and configuration settings---ie which data is available in which replica is stored within config servers. Typically implemented as a replica.
+
+
+Sharding is also called Partitioning.
+
+Assume that there are 10 rows in a table with _id ranging from 1 to 10 and there are 3 replica sets.
+
+	partition		keys(_id)	replica-set
+	partition-1		1 to 3 		shard-1		
+	partition-2		4&5		shard-2
+	partition-3		6&7		shard-3
+	partition-4		8 to 10		shard-1
+
+
+				client
+				   |				   |------config-svr-1 
+				mongos---------config-replica------|
+				   |				   |------config-svr-2
+				   |
+			---------------------------
+			|			   |
+		shard-1-replica			shard-2-replica
+			|			   |
+		----------------		----------------
+		|		|		|		|
+	shard-1-svr-1  shard-1-svr-2  shard-2-svr-1   shard-2-svr-2
+
+
+
+server			port		dbpath				logpath
+
+config-replica
+config-svr-1		27017		/var/lib/conf-svr-1-data	/var/log/conf-svr-1/mongod.log
+config-svr-2		27018		/var/lib/conf-svr-2-data	/var/log/conf-svr-2/mongod.log
+
+mongos			27019		---------			/var/log/mongos/mongos.log
+
+shard-1-replica
+
+shard-1-svr-1		27020		/var/lib/shard-1-svr-1-data	/var/log/shard-1-svr-1/mongod.log
+shard-1-svr-2		27021		/var/lib/shard-1-svr-2-data	/var/log/shard-1-svr-2/mongod.log
+
+shard-2-replica
+
+shard-2-svr-1		27022		/var/lib/shard-2-svr-1-data	/var/log/shard-2-svr-1/mongod.log
+shard-2-svr-2		27023		/var/lib/shard-2-svr-2-data	/var/log/shard-2-svr-2/mongod.log
+
+
+
+steps:
+
+1. Terminate any mongod or mongosh instances if they are running.
+
+2. create the data and log directories of config replica
+	
+student@ubuntu:~$ sudo mkdir -p /var/lib/conf-svr-1-data
+student@ubuntu:~$ sudo mkdir -p /var/lib/conf-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/conf-svr-1
+student@ubuntu:~$ sudo mkdir -p /var/log/conf-svr-2
+
+3. start the servers of config replica
+
+student@ubuntu:~$ sudo mongod --configsvr --dbpath /var/lib/conf-svr-1-data/ --logpath /var/log/conf-svr-1/mondod.log --port 27017 --replSet config-replica
+student@ubuntu:~$ sudo mongod --configsvr --dbpath /var/lib/conf-svr-2-data/ --logpath /var/log/conf-svr-2/mondod.log --port 27018 --replSet config-replica
+
+4. start a mongoshell for config-svr-1 and initialize the replica
+
+
+mongosh
+
+test> rs.initiate()
+config-replica [direct: other] test> rs.add("localhost:27018")
+
+5. create the log directory for mongos and start the mongos server
+
+open a new terminal and run
+
+sudo mkdir -p /var/log/mongos
+sudo mongos --logpath /var/log/mongos/mongos.log --port 27019 --configdb config-replica/localhost:27017,localhost:27018
+
+6. create the data and log directories of shard-1-replica
+
+
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-1-svr-1-data
+[sudo: authenticate] Password:         
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-1-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-1-svr-1
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-1-svr-2
+
+7. start the servers of shard-1-replica
+from a new terminal tab
+sudo mongod --dbpath /var/lib/shard-1-svr-1-data/ --logpath /var/log/shard-1-svr-1/mongod.log --port 27020 --replSet shard-1-replica --shardsvr
+
+from another terminal tab
+sudo mongod --dbpath /var/lib/shard-1-svr-2-data/ --logpath /var/log/shard-1-svr-2/mongod.log --port 27021 --replSet shard-1-replica --shardsvr
+
+8. initialize the shard-1-replica
+
+from another terminal tab
+mongosh --port 27020
+rs.initiate();
+rs.add("localhost:27021");
+
+9. create the data and log directories of shard-2-replica
+
+
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-2-svr-1-data
+[sudo: authenticate] Password:         
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-2-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-2-svr-1
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-2-svr-2
+
+
+10. start the servers of shard-2-replica
+from a new terminal tab
+sudo mongod --dbpath /var/lib/shard-2-svr-1-data/ --logpath /var/log/shard-2-svr-1/mongod.log --port 27022 --replSet shard-2-replica --shardsvr
+
+from another terminal tab
+sudo mongod --dbpath /var/lib/shard-2-svr-2-data/ --logpath /var/log/shard-2-svr-2/mongod.log --port 27023 --replSet shard-2-replica --shardsvr
+
+11. initialize shard-2-replica
+
+from another terminal tab
+mongosh --port 27022
+rs.initiate();
+rs.add("localhost:27023");
+
+12.start a mongoshell to mongos(localhost:27019) and establish the connection between mongos and shard-replicas(shard-1-replica and shard-2-replica)
+
+student@ubuntu:~$ mongosh --port 27019
+
+[direct: mongos] test> sh.addShard("shard-1-replica/localhost:27020,localhost:27021")
+
+[direct: mongos] test> sh.addShard("shard-2-replica/localhost:27022,localhost:27023")
+[direct: mongos] test> sh.status()
+
+13. enable sharding for population db and cities collection with population
+
+ [direct: mongos] test> sh.enableSharding("population")
+[direct: mongos] test> sh.shardCollection("population.cities",{"country":"hashed"})
+
+use population
+
+14. insert the data
+
+db.cities.insertOne({"name": "Seoul", "country": "South Korea", "continent": "Asia", "population": 25.674 });
+db.cities.insertOne({"name": "Mumbai", "country": "India", "continent": "Asia", "population": 19.980 });
+db.cities.insertOne({"name": "Beijing", "country": "China", "continent": "Asia", "population": 19.618 });
+db.cities.insertOne({"name": "Shanghai", "country": "China", "continent": "Asia", "population": 25.582 });
+db.cities.insertOne({"name": "Osaka", "country": "Japan", "continent": "Asia", "population": 19.281 });
+db.cities.insertOne({"name": "Cairo", "country": "Egypt", "continent": "Africa", "population": 20.076 });
+db.cities.insertOne({"name": "Tokyo", "country": "Japan", "continent": "Asia", "population": 37.400 });
+db.cities.insertOne({"name": "Karachi", "country": "Pakistan", "continent": "Asia", "population": 15.400 });
+db.cities.insertOne({"name": "Dhaka", "country": "Bangladesh", "continent": "Asia", "population": 19.578 });
+db.cities.insertOne({"name": "Rio de Janeiro", "country": "Brazil", "continent": "South America", "population": 13.293 });
+db.cities.insertOne({"name": "São Paulo", "country": "Brazil", "continent": "South America", "population": 21.650 });
+db.cities.insertOne({"name": "Mexico City", "country": "Mexico", "continent": "North America", "population": 21.581 });
+db.cities.insertOne({"name": "Delhi", "country": "India", "continent": "Asia", "population": 28.514 });
+db.cities.insertOne({"name": "Buenos Aires", "country": "Argentina", "continent": "South America", "population": 14.967 });
+db.cities.insertOne({"name": "Kolkata", "country": "India", "continent": "Asia", "population": 14.681 });
+db.cities.insertOne({"name": "New York", "country": "United States", "continent": "North America", "population": 18.819 });
+db.cities.insertOne({"name": "Manila", "country": "Philippines", "continent": "Asia", "population": 13.482 });
+db.cities.insertOne({"name": "Chongqing", "country": "China", "continent": "Asia", "population": 14.838 });
+db.cities.insertOne({"name": "Istanbul", "country": "Turkey", "continent": "Europe", "population": 14.751 });
+db.cities.insertOne({"name": "Lagos", "country": "Nigeria","continent": "Africa","population": 13.463 });
+
+15. db.cities.find({"country":"India"}).explain()
+db.cities.find({"country":"Japan"}).explain()
+
+The output shows, from which replica the data is retrieved.
+
+
+Mongodb Atlas:
+
+Mongodb Atlas is a fully mangaged, cloud based database service(DBaaS----Database as a Service) for mongodb.
+
+Instead of installing, configuring and managing mongodb on your own servers, Atlas allows you to deploy and scale databases within few clicks.
+
+organization is the highest level container in mogodb atlas.
+It is normally used to represent a company, team or business unit.
+
+Project:
+
+A project is a logical workspace in an organization.
+A project contains the mongodb resources for that environment.
+
+
+A project can contain cluster, database users, ip access list, network configuration and etc.
+
+atlas cli-----atlas can be managed from the command line.
+
+
+
+
+
+
+

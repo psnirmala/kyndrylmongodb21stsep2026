@@ -1,0 +1,119 @@
+https://github.com/psnirmala/kyndrylmongodb21stsep2026
+
+student@ubuntu:~$ sudo mkdir -p /var/lib/conf-svr-1-data
+student@ubuntu:~$ sudo mkdir -p /var/lib/conf-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/conf-svr-1
+student@ubuntu:~$ sudo mkdir -p /var/log/conf-svr-2
+
+
+
+student@ubuntu:~$ sudo mongod --configsvr --dbpath /var/lib/conf-svr-1-data/ --logpath /var/log/conf-svr-1/mondod.log --port 27017 --replSet config-replica
+student@ubuntu:~$ sudo mongod --configsvr --dbpath /var/lib/conf-svr-2-data/ --logpath /var/log/conf-svr-2/mondod.log --port 27018 --replSet config-replica
+
+open one more terminal tab, launch a client for config-replica-svr-1
+
+mongosh
+
+test> rs.initiate()
+
+config-replica [direct: other] test> rs.add("localhost:27018")
+
+
+open a new terminal and run
+
+sudo mkdir -p /var/log/mongos
+sudo mongos --logpath /var/log/mongos/mongos.log --port 27019 --configdb config-replica/localhost:27017,localhost:27018
+
+create data and log directories of shard-1-replica
+
+
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-1-svr-1-data
+[sudo: authenticate] Password:         
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-1-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-1-svr-1
+
+start the servers of shard-1-replica
+
+
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-1-svr-2
+
+from new terminal window
+sudo mongod --dbpath /var/lib/shard-1-svr-1-data/ --logpath /var/log/shard-1-svr-1/mongod.log --port 27020 --replSet shard-1-replica --shardsvr
+
+from another terminal tab
+sudo mongod --dbpath /var/lib/shard-1-svr-2-data/ --logpath /var/log/shard-1-svr-2/mongod.log --port 27021 --replSet shard-1-replica --shardsvr
+
+
+from another terminal tab
+mongosh --port 27020
+rs.initiate();
+rs.add("localhost:27021");
+
+
+create data and log directories of shard-2-replica
+
+
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-2-svr-1-data
+[sudo: authenticate] Password:         
+student@ubuntu:~$ sudo mkdir -p /var/lib/shard-2-svr-2-data
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-2-svr-1
+student@ubuntu:~$ sudo mkdir -p /var/log/shard-2-svr-2
+
+
+
+from a new terminal window
+sudo mongod --dbpath /var/lib/shard-2-svr-1-data/ --logpath /var/log/shard-2-svr-1/mongod.log --port 27022 --replSet shard-2-replica --shardsvr
+
+from another terminal tab
+sudo mongod --dbpath /var/lib/shard-2-svr-2-data/ --logpath /var/log/shard-2-svr-2/mongod.log --port 27023 --replSet shard-2-replica --shardsvr
+
+from another terminal tab
+mongosh --port 27022
+rs.initiate();
+rs.add("localhost:27023");
+
+student@ubuntu:~$ mongosh --port 27019
+
+[direct: mongos] test> sh.addShard("shard-1-replica/localhost:27020,localhost:27021")
+
+[direct: mongos] test> sh.addShard("shard-2-replica/localhost:27022,localhost:27023")
+[direct: mongos] test> sh.status()
+
+[direct: mongos] test> sh.enableSharding("population")
+[direct: mongos] test> sh.shardCollection("population.cities",{"country":"hashed"})
+
+use population;
+
+
+-------
+db.cities.insertOne({"name": "Seoul", "country": "South Korea", "continent": "Asia", "population": 25.674 });
+db.cities.insertOne({"name": "Mumbai", "country": "India", "continent": "Asia", "population": 19.980 });
+db.cities.insertOne({"name": "Beijing", "country": "China", "continent": "Asia", "population": 19.618 });
+db.cities.insertOne({"name": "Shanghai", "country": "China", "continent": "Asia", "population": 25.582 });
+db.cities.insertOne({"name": "Osaka", "country": "Japan", "continent": "Asia", "population": 19.281 });
+db.cities.insertOne({"name": "Cairo", "country": "Egypt", "continent": "Africa", "population": 20.076 });
+db.cities.insertOne({"name": "Tokyo", "country": "Japan", "continent": "Asia", "population": 37.400 });
+db.cities.insertOne({"name": "Karachi", "country": "Pakistan", "continent": "Asia", "population": 15.400 });
+db.cities.insertOne({"name": "Dhaka", "country": "Bangladesh", "continent": "Asia", "population": 19.578 });
+db.cities.insertOne({"name": "Rio de Janeiro", "country": "Brazil", "continent": "South America", "population": 13.293 });
+db.cities.insertOne({"name": "São Paulo", "country": "Brazil", "continent": "South America", "population": 21.650 });
+db.cities.insertOne({"name": "Mexico City", "country": "Mexico", "continent": "North America", "population": 21.581 });
+db.cities.insertOne({"name": "Delhi", "country": "India", "continent": "Asia", "population": 28.514 });
+db.cities.insertOne({"name": "Buenos Aires", "country": "Argentina", "continent": "South America", "population": 14.967 });
+db.cities.insertOne({"name": "Kolkata", "country": "India", "continent": "Asia", "population": 14.681 });
+db.cities.insertOne({"name": "New York", "country": "United States", "continent": "North America", "population": 18.819 });
+db.cities.insertOne({"name": "Manila", "country": "Philippines", "continent": "Asia", "population": 13.482 });
+db.cities.insertOne({"name": "Chongqing", "country": "China", "continent": "Asia", "population": 14.838 });
+db.cities.insertOne({"name": "Istanbul", "country": "Turkey", "continent": "Europe", "population": 14.751 });
+db.cities.insertOne({"name": "Lagos", "country": "Nigeria","continent": "Africa","population": 13.463 });
+
+db.cities.countDocuments()
+db.cities.getShardDistribution()
+
+[direct: mongos] population> db.cities.find({"country":"India"}).explain()
+
+[direct: mongos] population> db.cities.find({"country":"Japan"}).explain()
+
+mongosh "mongodb+srv://cluster-1.kbzdgbf.mongodb.net/" --apiVersion 1 --username subramanian -p pass1
+115.84.170.6
+
